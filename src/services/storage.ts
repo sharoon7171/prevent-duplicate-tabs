@@ -10,6 +10,15 @@ type StorageListener = (settings: ExtensionSettings) => void;
 type StatisticsListener = (statistics: StatisticsData) => void;
 type ReviewPromptListener = (state: ReviewPromptState) => void;
 
+type SettingsUpdate = Partial<Omit<ExtensionSettings, 'globalSettings'>> & {
+  globalSettings?: Partial<ExtensionSettings['globalSettings']>;
+};
+
+interface AppData {
+  settings: ExtensionSettings;
+  statistics: StatisticsData;
+}
+
 class StorageService {
   private listeners: Set<StorageListener> = new Set();
   private statisticsListeners: Set<StatisticsListener> = new Set();
@@ -20,20 +29,49 @@ class StorageService {
     try {
       const result = await chrome.storage.sync.get(SETTINGS_STORAGE_KEY);
       const stored = result[SETTINGS_STORAGE_KEY];
-      if (typeof stored === 'string') {
-        return this.parseSettings(stored);
-      }
-      return { ...DEFAULT_SETTINGS };
+      return typeof stored === 'string' ? this.parseSettings(stored) : { ...DEFAULT_SETTINGS };
     } catch (error) {
       console.error('Error reading settings:', error);
       return { ...DEFAULT_SETTINGS };
     }
   }
 
-  async updateSettings(settings: Partial<ExtensionSettings>): Promise<void> {
+  async getAppData(): Promise<AppData> {
+    try {
+      const result = await chrome.storage.sync.get([SETTINGS_STORAGE_KEY, STATISTICS_STORAGE_KEY]);
+      const storedSettings = result[SETTINGS_STORAGE_KEY];
+      const storedStatistics = result[STATISTICS_STORAGE_KEY];
+
+      const settings =
+        typeof storedSettings === 'string'
+          ? this.parseSettings(storedSettings)
+          : { ...DEFAULT_SETTINGS };
+      const statistics =
+        typeof storedStatistics === 'string'
+          ? this.parseStatistics(storedStatistics)
+          : { ...DEFAULT_STATISTICS };
+
+      return { settings, statistics };
+    } catch (error) {
+      console.error('Error reading app data:', error);
+      return {
+        settings: { ...DEFAULT_SETTINGS },
+        statistics: { ...DEFAULT_STATISTICS },
+      };
+    }
+  }
+
+  async updateSettings(settings: SettingsUpdate): Promise<void> {
     try {
       const current = await this.getSettings();
-      const updated = { ...current, ...settings };
+      const updated: ExtensionSettings = {
+        ...current,
+        ...settings,
+        globalSettings: {
+          ...current.globalSettings,
+          ...settings.globalSettings,
+        },
+      };
 
       await chrome.storage.sync.set({ [SETTINGS_STORAGE_KEY]: JSON.stringify(updated) });
       this.notifyListeners(updated);
@@ -101,11 +139,15 @@ class StorageService {
       }
       if (changes[SETTINGS_STORAGE_KEY]) {
         const newValue = changes[SETTINGS_STORAGE_KEY].newValue;
-        if (typeof newValue === 'string') this.notifyListeners(this.parseSettings(newValue));
+        if (typeof newValue === 'string') {
+          this.notifyListeners(this.parseSettings(newValue));
+        }
       }
       if (changes[STATISTICS_STORAGE_KEY]) {
         const newValue = changes[STATISTICS_STORAGE_KEY].newValue;
-        if (typeof newValue === 'string') this.notifyStatisticsListeners(this.parseStatistics(newValue));
+        if (typeof newValue === 'string') {
+          this.notifyStatisticsListeners(this.parseStatistics(newValue));
+        }
       }
     });
 
@@ -116,10 +158,7 @@ class StorageService {
     try {
       const result = await chrome.storage.sync.get(STATISTICS_STORAGE_KEY);
       const stored = result[STATISTICS_STORAGE_KEY];
-      if (typeof stored === 'string') {
-        return this.parseStatistics(stored);
-      }
-      return { ...DEFAULT_STATISTICS };
+      return typeof stored === 'string' ? this.parseStatistics(stored) : { ...DEFAULT_STATISTICS };
     } catch (error) {
       console.error('Error reading statistics:', error);
       return { ...DEFAULT_STATISTICS };

@@ -10,7 +10,6 @@ import {
 class TabDetectionService {
   private isInitialized: boolean = false;
   private currentSettings: ExtensionSettings | null = null;
-  private unsubscribeSettings: (() => void) | null = null;
   private processingTabs: Set<number> = new Set();
   private bypassTabIds: Set<number> = new Set();
   private bypassCreateCount = 0;
@@ -24,7 +23,7 @@ class TabDetectionService {
     }
 
     this.currentSettings = await storageService.getSettings();
-    this.unsubscribeSettings = storageService.subscribe((settings) => {
+    storageService.subscribe((settings) => {
       const previous = this.currentSettings;
       this.currentSettings = settings;
       if (settings.enabled && this.shouldScanAfterSettingsChange(previous, settings)) {
@@ -48,7 +47,7 @@ class TabDetectionService {
 
     chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       if (changeInfo.url || (changeInfo.status === 'complete' && tab.url)) {
-        this.handleTabUpdated(tabId, tab).catch((error) => {
+        void this.processTab(tab, tabId).catch((error) => {
           console.error('Error handling tab update:', error);
         });
       }
@@ -382,10 +381,6 @@ class TabDetectionService {
     }
   }
 
-  private async handleTabUpdated(tabId: number, tab: chrome.tabs.Tab): Promise<void> {
-    await this.processTab(tab, tabId);
-  }
-
   private async processTab(tab: chrome.tabs.Tab, tabId: number): Promise<void> {
     await this.resolvePendingNativeTabDuplicate(tab);
     if (this.isBypassTab(tabId)) {
@@ -516,22 +511,6 @@ class TabDetectionService {
       }
       console.error('Error handling duplicate:', error);
     }
-  }
-
-  cleanup(): void {
-    if (this.scanTimeout !== null) {
-      clearTimeout(this.scanTimeout);
-      this.scanTimeout = null;
-    }
-    if (this.unsubscribeSettings) {
-      this.unsubscribeSettings();
-      this.unsubscribeSettings = null;
-    }
-    this.processingTabs.clear();
-    this.bypassTabIds.clear();
-    this.bypassCreateCount = 0;
-    this.pendingNativeDuplicateOpener.clear();
-    this.isInitialized = false;
   }
 }
 

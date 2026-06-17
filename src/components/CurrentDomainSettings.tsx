@@ -3,8 +3,9 @@ import { Toggle } from './Toggle';
 import { RadioGroup } from './RadioGroup';
 import { Button } from './Button';
 import { storageService } from '@/services/storage';
-import type { ExtensionSettings, DuplicateAction } from '@/types/settings';
+import { DUPLICATE_ACTION_OPTIONS, type ExtensionSettings, type DuplicateAction } from '@/types/settings';
 import { normalizeException, isPageInExceptions, isDomainInExceptions } from '@/utils/urlNormalization';
+import type { ActiveTabInfo } from '@/utils/activeTab';
 import { gradientBarClass } from '@/ui-classes/gradient-bar';
 import {
   accentPanel,
@@ -21,70 +22,43 @@ import { textBody, textCardSubtitle, textCardTitle, textSectionLabel } from '@/u
 
 interface CurrentDomainSettingsProps {
   className?: string;
-  initialSettings?: ExtensionSettings;
+  initialSettings: ExtensionSettings;
+  activeTab: ActiveTabInfo | null;
+  activeTabResolved: boolean;
 }
-
-const DUPLICATE_ACTION_OPTIONS = [
-  { value: 'close-new-stay-current', label: 'Close new duplicate tab and stay on current tab' },
-  { value: 'close-old-stay-current', label: 'Close old duplicate and stay on current tab' },
-  { value: 'close-new-switch-existing', label: 'Close new duplicate tab and switch to existing tab' },
-  { value: 'close-old-switch-new', label: 'Close old duplicate and switch to new tab' },
-] as const;
 
 export const CurrentDomainSettings: React.FC<CurrentDomainSettingsProps> = ({
   initialSettings,
+  activeTab,
+  activeTabResolved = false,
   className = '',
 }: CurrentDomainSettingsProps): React.JSX.Element | null => {
-  const [settings, setSettings] = useState<ExtensionSettings | null>(initialSettings ?? null);
+  const [settings, setSettings] = useState<ExtensionSettings>(initialSettings);
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [currentDomain, setCurrentDomain] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (initialSettings === undefined) {
-      storageService.getSettings().then((loadedSettings) => {
-        setSettings(loadedSettings);
-      });
-    }
-
     const unsubscribe = storageService.subscribe((updatedSettings) => {
       setSettings(updatedSettings);
-    });
-
-    chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
-      if (tabs[0]?.url) {
-        try {
-          const url = tabs[0].url;
-          const urlObj = new URL(url);
-
-          if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-            setCurrentUrl(url);
-            setCurrentDomain(urlObj.hostname);
-          } else {
-            setCurrentUrl(null);
-            setCurrentDomain(null);
-          }
-        } catch (error) {
-          setCurrentUrl(null);
-          setCurrentDomain(null);
-        }
-      } else {
-        setCurrentUrl(null);
-        setCurrentDomain(null);
-      }
-      setIsLoading(false);
-    }).catch(() => {
-      setCurrentUrl(null);
-      setCurrentDomain(null);
-      setIsLoading(false);
     });
 
     return (): void => {
       unsubscribe();
     };
-  }, [initialSettings]);
+  }, []);
 
-  if (isLoading || !settings || !currentUrl || !currentDomain) {
+  useEffect(() => {
+    if (!activeTabResolved) {
+      return;
+    }
+
+    setCurrentUrl(activeTab?.url ?? null);
+    setCurrentDomain(activeTab?.domain ?? null);
+    setIsLoading(false);
+  }, [activeTab, activeTabResolved]);
+
+  if (isLoading || !currentUrl || !currentDomain) {
     return null;
   }
 

@@ -23,27 +23,25 @@ const PREVENTION_SCOPE_OPTIONS = [
 ] as const;
 
 interface ExtensionStatusProps {
-  enabled?: boolean;
   className?: string;
-  initialEnabled?: boolean;
+  initialEnabled: boolean;
+  initialPreventionScope: PreventionScope;
+  initialDuplicateScope: DuplicateScope;
 }
 
 export const ExtensionStatus: React.FC<ExtensionStatusProps> = ({
-  enabled: propEnabled,
   initialEnabled,
+  initialPreventionScope,
+  initialDuplicateScope,
   className = '',
 }: ExtensionStatusProps): React.JSX.Element => {
-  const [isEnabled, setIsEnabled] = useState<boolean>(initialEnabled ?? propEnabled ?? true);
-  const [checkAllWindows, setCheckAllWindows] = useState<boolean>(true);
-  const [preventionScope, setPreventionScope] = useState<PreventionScope>('everywhere');
+  const [isEnabled, setIsEnabled] = useState<boolean>(initialEnabled);
+  const [checkAllWindows, setCheckAllWindows] = useState<boolean>(
+    initialDuplicateScope === 'all-windows'
+  );
+  const [preventionScope, setPreventionScope] = useState<PreventionScope>(initialPreventionScope);
 
   useEffect(() => {
-    storageService.getSettings().then((settings) => {
-      setCheckAllWindows(settings.globalSettings.duplicateScope === 'all-windows');
-      setPreventionScope(settings.preventionScope);
-      if (initialEnabled === undefined) setIsEnabled(settings.enabled);
-    });
-
     const unsubscribe = storageService.subscribe((settings) => {
       setIsEnabled(settings.enabled);
       setCheckAllWindows(settings.globalSettings.duplicateScope === 'all-windows');
@@ -53,7 +51,7 @@ export const ExtensionStatus: React.FC<ExtensionStatusProps> = ({
     return (): void => {
       unsubscribe();
     };
-  }, [initialEnabled]);
+  }, []);
 
   const handleToggle = async (checked: boolean): Promise<void> => {
     setIsEnabled(checked);
@@ -63,10 +61,8 @@ export const ExtensionStatus: React.FC<ExtensionStatusProps> = ({
   const handleScopeToggle = async (checked: boolean): Promise<void> => {
     const scope: DuplicateScope = checked ? 'all-windows' : 'current-window';
     setCheckAllWindows(checked);
-    const current = await storageService.getSettings();
     await storageService.updateSettings({
       globalSettings: {
-        ...current.globalSettings,
         duplicateScope: scope,
       },
     });

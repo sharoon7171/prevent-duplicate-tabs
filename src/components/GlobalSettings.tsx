@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { DuplicateAction } from '@/types/settings';
+import { DUPLICATE_ACTION_OPTIONS, type DuplicateAction } from '@/types/settings';
 import { RadioGroup } from './RadioGroup';
 import { Toggle } from './Toggle';
 import { storageService } from '@/services/storage';
@@ -17,43 +17,25 @@ import {
 import { textBody, textCardTitle } from '@/ui-classes/typography';
 
 interface GlobalSettingsProps {
-  duplicateAction?: DuplicateAction;
-  ignoreParameters?: boolean;
   className?: string;
-  initialGlobalSettings?: {
+  initialGlobalSettings: {
     duplicateAction: DuplicateAction;
     ignoreParameters: boolean;
   };
 }
 
-const DUPLICATE_ACTION_OPTIONS = [
-  { value: 'close-new-stay-current', label: 'Close new duplicate tab and stay on current tab' },
-  { value: 'close-old-stay-current', label: 'Close old duplicate and stay on current tab' },
-  { value: 'close-new-switch-existing', label: 'Close new duplicate tab and switch to existing tab' },
-  { value: 'close-old-switch-new', label: 'Close old duplicate and switch to new tab' },
-] as const;
-
 export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
-  duplicateAction: propDuplicateAction,
-  ignoreParameters: propIgnoreParameters,
   className = '',
   initialGlobalSettings,
 }: GlobalSettingsProps): React.JSX.Element => {
   const [duplicateActionState, setDuplicateActionState] = useState<DuplicateAction>(
-    initialGlobalSettings?.duplicateAction ?? propDuplicateAction ?? 'close-new-stay-current'
+    initialGlobalSettings.duplicateAction
   );
   const [ignoreParametersState, setIgnoreParametersState] = useState<boolean>(
-    initialGlobalSettings?.ignoreParameters ?? propIgnoreParameters ?? false
+    initialGlobalSettings.ignoreParameters
   );
 
   useEffect(() => {
-    if (initialGlobalSettings === undefined) {
-      storageService.getSettings().then((settings) => {
-        setDuplicateActionState(settings.globalSettings.duplicateAction);
-        setIgnoreParametersState(settings.globalSettings.ignoreParameters);
-      });
-    }
-
     const unsubscribe = storageService.subscribe((settings) => {
       setDuplicateActionState(settings.globalSettings.duplicateAction);
       setIgnoreParametersState(settings.globalSettings.ignoreParameters);
@@ -62,15 +44,13 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
     return (): void => {
       unsubscribe();
     };
-  }, [initialGlobalSettings]);
+  }, []);
 
   const handleDuplicateActionChange = async (value: string): Promise<void> => {
     const action = value as DuplicateAction;
     setDuplicateActionState(action);
-    const current = await storageService.getSettings();
     await storageService.updateSettings({
       globalSettings: {
-        ...current.globalSettings,
         duplicateAction: action,
         ignoreParameters: ignoreParametersState,
       },
@@ -79,10 +59,8 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
 
   const handleIgnoreParametersChange = async (checked: boolean): Promise<void> => {
     setIgnoreParametersState(checked);
-    const current = await storageService.getSettings();
     await storageService.updateSettings({
       globalSettings: {
-        ...current.globalSettings,
         duplicateAction: duplicateActionState,
         ignoreParameters: checked,
       },

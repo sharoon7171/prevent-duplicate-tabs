@@ -4,6 +4,13 @@ export type DuplicateAction =
   | 'close-new-switch-existing'
   | 'close-old-switch-new';
 
+export const DUPLICATE_ACTION_OPTIONS: ReadonlyArray<{ value: DuplicateAction; label: string }> = [
+  { value: 'close-new-stay-current', label: 'Close new duplicate tab and stay on current tab' },
+  { value: 'close-old-stay-current', label: 'Close old duplicate and stay on current tab' },
+  { value: 'close-new-switch-existing', label: 'Close new duplicate tab and switch to existing tab' },
+  { value: 'close-old-switch-new', label: 'Close old duplicate and switch to new tab' },
+];
+
 export type DuplicateScope = 'all-windows' | 'current-window';
 
 export type PreventionScope = 'everywhere' | 'listed-only';

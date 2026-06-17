@@ -7,19 +7,13 @@ import { textAppSubtitle, textAppTitle } from '@/ui-classes/typography';
 interface HeaderProps {
   title: string;
   subtitle?: string;
-  icon?: React.ReactNode;
-  actions?: React.ReactNode;
-  className?: string;
   stats?: { currentTabsCount: number; tabsClosedCount: number };
 }
 
 export const Header: React.FC<HeaderProps> = ({
   title,
   subtitle,
-  icon,
-  actions,
   stats,
-  className = '',
 }: HeaderProps): React.JSX.Element => {
   const getIconSrc = (): string => {
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
@@ -28,21 +22,15 @@ export const Header: React.FC<HeaderProps> = ({
     return '/icon-48.png';
   };
 
-  const defaultIcon = (
-    <img src={getIconSrc()} alt="Extension Icon" className={headerIcon} />
-  );
-
-  const displayIcon = icon ?? defaultIcon;
-
   return (
-    <header
-      className={`relative w-full shrink-0 overflow-hidden bg-linear-to-br from-brand to-brand-dark text-white shadow-header transition-all duration-300 hover:shadow-xl ${className}`}
-    >
+    <header className="relative w-full shrink-0 overflow-hidden bg-linear-to-br from-brand to-brand-dark text-white shadow-header transition-all duration-300 hover:shadow-xl">
       <div className={`${gradientBarClass} ${cardShellTopRadius}`} />
       <div className={headerInner}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="shrink-0 text-white">{displayIcon}</div>
+            <div className="shrink-0 text-white">
+              <img src={getIconSrc()} alt="Extension Icon" className={headerIcon} />
+            </div>
             <div className="flex min-w-0 flex-col">
               <h1 className={`${textAppTitle} text-white`}>{title}</h1>
               {subtitle && (
@@ -50,19 +38,16 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {stats != null && (
-              <div className="flex items-center gap-1 font-bold">
-                <span className={headerStatBadge} title="Active tabs">
-                  {stats.currentTabsCount.toLocaleString()} tabs
-                </span>
-                <span className={headerStatBadge} title="Duplicates prevented">
-                  {stats.tabsClosedCount.toLocaleString()} prevented
-                </span>
-              </div>
-            )}
-            {actions && <div className="flex items-center gap-1.5">{actions}</div>}
-          </div>
+          {stats != null && (
+            <div className="flex shrink-0 items-center gap-1 font-bold">
+              <span className={headerStatBadge} title="Active tabs">
+                {stats.currentTabsCount.toLocaleString()} tabs
+              </span>
+              <span className={headerStatBadge} title="Duplicates prevented">
+                {stats.tabsClosedCount.toLocaleString()} prevented
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </header>

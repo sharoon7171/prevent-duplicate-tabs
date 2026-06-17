@@ -20,7 +20,7 @@ import {
   optionsListScroll,
 } from '@/ui-classes/layout';
 import { textBadge, textBodyBold, textCaption, textCardSubtitle, textCardTitle } from '@/ui-classes/typography';
-import type { PreventionScope } from '@/types/settings';
+import type { ExtensionSettings, PreventionScope } from '@/types/settings';
 
 type SiteKind = 'domain' | 'page';
 
@@ -31,14 +31,26 @@ interface SiteItem {
 
 interface SiteListProps {
   className?: string;
+  initialSettings: ExtensionSettings;
 }
 
 export const SiteList: React.FC<SiteListProps> = ({
   className = '',
+  initialSettings,
 }: SiteListProps): React.JSX.Element => {
-  const [preventionScope, setPreventionScope] = useState<PreventionScope>('everywhere');
-  const [pages, setPages] = useState<string[]>([]);
-  const [domains, setDomains] = useState<string[]>([]);
+  const [preventionScope, setPreventionScope] = useState<PreventionScope>(
+    initialSettings.preventionScope
+  );
+  const [pages, setPages] = useState<string[]>(() =>
+    initialSettings.preventionScope === 'listed-only'
+      ? initialSettings.targetPages
+      : initialSettings.exceptions
+  );
+  const [domains, setDomains] = useState<string[]>(() =>
+    initialSettings.preventionScope === 'listed-only'
+      ? initialSettings.targetDomains
+      : initialSettings.domainExceptions
+  );
   const [inputValue, setInputValue] = useState<string>('');
   const [inputKind, setInputKind] = useState<SiteKind>('domain');
   const [searchValue, setSearchValue] = useState<string>('');
@@ -78,8 +90,6 @@ export const SiteList: React.FC<SiteListProps> = ({
         setDomains(settings.domainExceptions);
       }
     };
-
-    storageService.getSettings().then(syncFromSettings);
 
     const unsubscribe = storageService.subscribe(syncFromSettings);
 

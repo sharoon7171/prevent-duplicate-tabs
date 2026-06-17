@@ -15,7 +15,6 @@ import {
 } from '@/ui-classes/footer';
 
 interface FooterProps {
-  className?: string;
   variant?: 'default' | 'popup';
 }
 
@@ -26,15 +25,12 @@ const FOOTER_LINKS = [
 ] as const;
 
 export const Footer: React.FC<FooterProps> = ({
-  className = '',
   variant = 'default',
 }: FooterProps): React.JSX.Element => {
   const isPopup = variant === 'popup';
 
   return (
-    <footer
-      className={`${footerShell} ${isPopup ? 'bg-slate-100/95' : 'bg-slate-50'} ${className}`}
-    >
+    <footer className={`${footerShell} ${isPopup ? 'bg-slate-100/95' : 'bg-slate-50'}`}>
       <div className={gradientBarClass} />
       <div className={isPopup ? footerInner : footerInnerOptions}>
         <div className={footerRow}>

@@ -55,17 +55,45 @@ function isEligible(review: ReviewPromptState, now: number, enabled: boolean): b
 interface ReviewPromptProps {
   enabled: boolean;
   variant?: 'popup' | 'options';
+  deferMount?: boolean;
 }
 
 export const ReviewPrompt: React.FC<ReviewPromptProps> = ({
   enabled,
   variant = 'options',
+  deferMount = false,
 }): React.JSX.Element | null => {
   const [reviewState, setReviewState] = useState<ReviewPromptState | null>(null);
   const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(!deferMount);
   const isPopup = variant === 'popup';
 
   useEffect(() => {
+    if (!deferMount) {
+      return;
+    }
+
+    const schedule = (): void => {
+      setMounted(true);
+    };
+
+    if ('requestIdleCallback' in globalThis) {
+      const idleId = globalThis.requestIdleCallback(schedule);
+      return (): void => {
+        globalThis.cancelIdleCallback(idleId);
+      };
+    }
+
+    const timeoutId = globalThis.setTimeout(schedule, 0);
+    return (): void => {
+      globalThis.clearTimeout(timeoutId);
+    };
+  }, [deferMount]);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
     let cancelled = false;
     void storageService.getReviewPromptState().then((s) => {
       if (!cancelled) {
@@ -81,10 +109,10 @@ export const ReviewPrompt: React.FC<ReviewPromptProps> = ({
       cancelled = true;
       unsub();
     };
-  }, []);
+  }, [mounted]);
 
   useEffect(() => {
-    if (reviewState == null) {
+    if (!mounted || reviewState == null) {
       return;
     }
     const el = isEligible(reviewState, Date.now(), enabled);
@@ -93,7 +121,7 @@ export const ReviewPrompt: React.FC<ReviewPromptProps> = ({
     } else {
       setVisible(false);
     }
-  }, [reviewState, enabled]);
+  }, [reviewState, enabled, mounted]);
 
   const handleRate = (): void => {
     chrome.tabs.create({ url: CHROME_WEB_STORE_REVIEWS_URL, active: true });
@@ -112,7 +140,7 @@ export const ReviewPrompt: React.FC<ReviewPromptProps> = ({
     setVisible(false);
   };
 
-  if (!visible) {
+  if (!mounted || !visible) {
     return null;
   }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import type { DuplicateAction, SiteRule } from '@/types/settings';
+import { DUPLICATE_ACTION_OPTIONS, type DuplicateAction, type SiteRule } from '@/types/settings';
 import { Toggle } from './Toggle';
 import { RadioGroup } from './RadioGroup';
 import { Input } from './Input';
@@ -27,24 +27,15 @@ import {
 import { textBadge, textBodyBold, textCaption, textCardSubtitle, textCardTitle } from '@/ui-classes/typography';
 
 interface SiteSpecificRulesProps {
-  rules?: SiteRule[];
   className?: string;
-  initialSiteRules?: SiteRule[];
+  initialSiteRules: SiteRule[];
 }
 
-const DUPLICATE_ACTION_OPTIONS = [
-  { value: 'close-new-stay-current', label: 'Close new duplicate tab and stay on current tab' },
-  { value: 'close-old-stay-current', label: 'Close old duplicate and stay on current tab' },
-  { value: 'close-new-switch-existing', label: 'Close new duplicate tab and switch to existing tab' },
-  { value: 'close-old-switch-new', label: 'Close old duplicate and switch to new tab' },
-] as const;
-
 export const SiteSpecificRules: React.FC<SiteSpecificRulesProps> = ({
-  rules: propRules,
   className = '',
   initialSiteRules,
 }: SiteSpecificRulesProps): React.JSX.Element => {
-  const [siteRules, setSiteRules] = useState<SiteRule[]>(initialSiteRules ?? propRules ?? []);
+  const [siteRules, setSiteRules] = useState<SiteRule[]>(initialSiteRules);
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [searchValue, setSearchValue] = useState<string>('');
   const [expandedRules, setExpandedRules] = useState<Set<number>>(new Set());
@@ -77,12 +68,6 @@ export const SiteSpecificRules: React.FC<SiteSpecificRulesProps> = ({
   }, [siteRules, searchValue]);
 
   useEffect(() => {
-    if (initialSiteRules === undefined) {
-      storageService.getSettings().then((settings) => {
-        setSiteRules(settings.siteRules);
-      });
-    }
-
     const unsubscribe = storageService.subscribe((settings) => {
       setSiteRules(settings.siteRules);
     });
@@ -90,7 +75,7 @@ export const SiteSpecificRules: React.FC<SiteSpecificRulesProps> = ({
     return (): void => {
       unsubscribe();
     };
-  }, [initialSiteRules]);
+  }, []);
 
   const handleAddRule = async (): Promise<void> => {
     if (newRule.domain.trim()) {
