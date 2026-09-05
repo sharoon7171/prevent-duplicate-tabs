@@ -5,6 +5,7 @@ import { RadioGroup } from './RadioGroup';
 import { Input } from './Input';
 import { Button } from './Button';
 import { storageService } from '@/services/storage';
+import { normalizeSiteDomain } from '@/utils/urlNormalization';
 import { gradientBarClass } from '@/ui-classes/gradient-bar';
 import { iconButtonSvg, inputInlineEdit } from '@/ui-classes/control';
 import {
@@ -78,13 +79,18 @@ export const SiteSpecificRules: React.FC<SiteSpecificRulesProps> = ({
   }, []);
 
   const handleAddRule = async (): Promise<void> => {
-    if (newRule.domain.trim()) {
-      const updatedRules = [...siteRules, { ...newRule, domain: newRule.domain.trim() }];
-      setSiteRules(updatedRules);
-      await storageService.updateSettings({ siteRules: updatedRules });
-      setNewRule({ domain: '', duplicateAction: 'close-new-stay-current', ignoreParameters: false });
-      setShowAddForm(false);
+    const domain = normalizeSiteDomain(newRule.domain);
+    if (!domain) {
+      return;
     }
+    if (siteRules.some((rule) => normalizeSiteDomain(rule.domain) === domain)) {
+      return;
+    }
+    const updatedRules = [...siteRules, { ...newRule, domain }];
+    setSiteRules(updatedRules);
+    await storageService.updateSettings({ siteRules: updatedRules });
+    setNewRule({ domain: '', duplicateAction: 'close-new-stay-current', ignoreParameters: false });
+    setShowAddForm(false);
   };
 
   const handleDomainInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -120,10 +126,10 @@ export const SiteSpecificRules: React.FC<SiteSpecificRulesProps> = ({
   };
 
   const handleDomainEditSave = async (index: number): Promise<void> => {
-    if (editingDomainValue.trim()) {
-      const normalizedDomain = editingDomainValue.trim().toLowerCase();
-      const isDuplicate = siteRules.some((rule, idx) =>
-        idx !== index && rule.domain.toLowerCase() === normalizedDomain
+    const normalizedDomain = normalizeSiteDomain(editingDomainValue);
+    if (normalizedDomain) {
+      const isDuplicate = siteRules.some(
+        (rule, idx) => idx !== index && normalizeSiteDomain(rule.domain) === normalizedDomain
       );
 
       if (!isDuplicate) {

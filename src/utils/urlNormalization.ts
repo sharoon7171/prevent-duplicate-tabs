@@ -58,10 +58,17 @@ export function extractDomain(url: string | undefined): string | null {
     if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
       return null;
     }
-    return urlObj.hostname;
+    return urlObj.hostname.toLowerCase();
   } catch (error) {
     return null;
   }
+}
+
+export function normalizeSiteDomain(input: string | undefined): string | null {
+  if (!input || !input.trim()) {
+    return null;
+  }
+  return extractDomain(normalizeException(input.trim()));
 }
 
 export function isPageInExceptions(url: string | undefined, exceptions: string[]): boolean {
@@ -91,9 +98,8 @@ export function isDomainInExceptions(domain: string | null, domainExceptions: st
   }
 
   return domainExceptions.some((exception) => {
-    const normalizedException = normalizeException(exception);
-    const exceptionDomain = extractDomain(normalizedException);
-    return exceptionDomain === domain;
+    const exceptionDomain = normalizeSiteDomain(exception);
+    return exceptionDomain !== null && exceptionDomain === domain.toLowerCase();
   });
 }
 

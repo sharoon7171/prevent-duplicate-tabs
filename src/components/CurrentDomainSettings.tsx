@@ -4,7 +4,12 @@ import { RadioGroup } from './RadioGroup';
 import { Button } from './Button';
 import { storageService } from '@/services/storage';
 import { DUPLICATE_ACTION_OPTIONS, type ExtensionSettings, type DuplicateAction } from '@/types/settings';
-import { normalizeException, isPageInExceptions, isDomainInExceptions } from '@/utils/urlNormalization';
+import {
+  normalizeException,
+  normalizeSiteDomain,
+  isPageInExceptions,
+  isDomainInExceptions,
+} from '@/utils/urlNormalization';
 import type { ActiveTabInfo } from '@/utils/activeTab';
 import { gradientBarClass } from '@/ui-classes/gradient-bar';
 import {
@@ -85,7 +90,9 @@ export const CurrentDomainSettings: React.FC<CurrentDomainSettingsProps> = ({
     ? `Prevent duplicate tabs for all pages on ${currentDomain}`
     : `Allow duplicate tabs for all pages on ${currentDomain}`;
   const scopeSectionLabel = isListedOnly ? 'Monitoring' : 'Exceptions';
-  const currentSiteRule = settings.siteRules.find((rule) => rule.domain === currentDomain);
+  const currentSiteRule = currentDomain
+    ? settings.siteRules.find((rule) => normalizeSiteDomain(rule.domain) === currentDomain)
+    : undefined;
   const hasSiteRule = currentSiteRule !== undefined;
 
   const currentDuplicateAction: DuplicateAction = currentSiteRule?.duplicateAction ?? settings.globalSettings.duplicateAction;
@@ -189,13 +196,13 @@ export const CurrentDomainSettings: React.FC<CurrentDomainSettingsProps> = ({
   const handleCreateOrUpdateSiteRule = async (updates: { duplicateAction?: DuplicateAction; ignoreParameters?: boolean }): Promise<void> => {
     if (!settings || !currentDomain) return;
 
-    const existingRule = settings.siteRules.find((rule) => rule.domain === currentDomain);
+    const existingRule = settings.siteRules.find((rule) => normalizeSiteDomain(rule.domain) === currentDomain);
     const currentDuplicateAction = existingRule?.duplicateAction ?? settings.globalSettings.duplicateAction;
     const currentIgnoreParameters = existingRule?.ignoreParameters ?? settings.globalSettings.ignoreParameters;
 
     if (existingRule) {
       const updatedRules = settings.siteRules.map((rule) =>
-        rule.domain === currentDomain ? { ...rule, ...updates } : rule
+        normalizeSiteDomain(rule.domain) === currentDomain ? { ...rule, ...updates } : rule
       );
       await storageService.updateSettings({ siteRules: updatedRules });
     } else {
@@ -209,9 +216,11 @@ export const CurrentDomainSettings: React.FC<CurrentDomainSettingsProps> = ({
   };
 
   const handleRemoveSiteRule = async (): Promise<void> => {
-    if (!settings) return;
+    if (!settings || !currentDomain) return;
 
-    const updatedRules = settings.siteRules.filter((rule) => rule.domain !== currentDomain);
+    const updatedRules = settings.siteRules.filter(
+      (rule) => normalizeSiteDomain(rule.domain) !== currentDomain
+    );
     await storageService.updateSettings({ siteRules: updatedRules });
   };
 
