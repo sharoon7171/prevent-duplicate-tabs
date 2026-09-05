@@ -5,24 +5,46 @@ import {
   isUrlAllowedForDuplicateCheck,
   isUrlMonitoredInListedMode,
   extractDomain,
+  normalizeSiteDomain,
 } from '@/utils/urlNormalization';
 
 class TabDetectionService {
-  private isInitialized: boolean = false;
   private currentSettings: ExtensionSettings | null = null;
+  private readonly ready: Promise<void>;
+  private resolveReady: (() => void) | null = null;
   private processingTabs: Set<number> = new Set();
+  private dirtyTabs: Set<number> = new Set();
   private bypassTabIds: Set<number> = new Set();
   private bypassCreateCount = 0;
   private pendingNativeDuplicateOpener = new Map<number, number>();
   private scanTimeout: ReturnType<typeof setTimeout> | null = null;
   private isScanning = false;
+  private scanQueued = false;
+  private listenersRegistered = false;
+
+  constructor() {
+    this.ready = new Promise<void>((resolve) => {
+      this.resolveReady = resolve;
+    });
+    this.registerListeners();
+  }
 
   async initialize(): Promise<void> {
-    if (this.isInitialized) {
+    try {
+      this.currentSettings = await storageService.getSettings();
+    } finally {
+      this.resolveReady?.();
+      this.resolveReady = null;
+    }
+    this.scheduleScan();
+  }
+
+  private registerListeners(): void {
+    if (this.listenersRegistered) {
       return;
     }
+    this.listenersRegistered = true;
 
-    this.currentSettings = await storageService.getSettings();
     storageService.subscribe((settings) => {
       const previous = this.currentSettings;
       this.currentSettings = settings;
@@ -34,10 +56,7 @@ class TabDetectionService {
 
     chrome.tabs.onCreated.addListener((tab) => {
       this.applyBypassForNewTab(tab.id);
-      void this.evaluateNativeTabDuplicate(tab);
-      this.handleTabCreated(tab.id).catch((error) => {
-        console.error('Error handling tab creation:', error);
-      });
+      return this.onTabCreated(tab);
     });
 
     chrome.tabs.onRemoved.addListener((tabId) => {
@@ -45,16 +64,20 @@ class TabDetectionService {
       this.pendingNativeDuplicateOpener.delete(tabId);
     });
 
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab): void | Promise<void> => {
       if (changeInfo.url || (changeInfo.status === 'complete' && tab.url)) {
-        void this.processTab(tab, tabId).catch((error) => {
-          console.error('Error handling tab update:', error);
-        });
+        return this.processTab(tab, tabId);
       }
     });
+  }
 
-    this.isInitialized = true;
-    this.scheduleScan();
+  private async onTabCreated(tab: chrome.tabs.Tab): Promise<void> {
+    await this.ready;
+    await this.evaluateNativeTabDuplicate(tab);
+    if (tab.id === undefined) {
+      return;
+    }
+    await this.processTab(tab, tab.id);
   }
 
   private shouldScanAfterSettingsChange(
@@ -85,6 +108,10 @@ class TabDetectionService {
 
   private scheduleScan(): void {
     if (!this.currentSettings?.enabled) {
+      return;
+    }
+    if (this.isScanning) {
+      this.scanQueued = true;
       return;
     }
     if (this.scanTimeout !== null) {
@@ -129,7 +156,7 @@ class TabDetectionService {
 
     const domain = extractDomain(tab.url);
     const siteRule = domain
-      ? this.currentSettings.siteRules.find((rule) => rule.domain === domain)
+      ? this.currentSettings.siteRules.find((rule) => normalizeSiteDomain(rule.domain) === domain)
       : undefined;
 
     const ignoreParameters = siteRule?.ignoreParameters ?? this.currentSettings.globalSettings.ignoreParameters;
@@ -158,11 +185,17 @@ class TabDetectionService {
   }
 
   private async scanExistingTabs(): Promise<void> {
-    if (!this.currentSettings?.enabled || this.isScanning) {
+    await this.ready;
+    if (!this.currentSettings?.enabled) {
+      return;
+    }
+    if (this.isScanning) {
+      this.scanQueued = true;
       return;
     }
 
     this.isScanning = true;
+    this.scanQueued = false;
 
     try {
       const allTabs = await chrome.tabs.query({});
@@ -197,6 +230,10 @@ class TabDetectionService {
       console.error('Error scanning existing tabs:', error);
     } finally {
       this.isScanning = false;
+      if (this.scanQueued) {
+        this.scanQueued = false;
+        this.scheduleScan();
+      }
     }
   }
 
@@ -268,9 +305,6 @@ class TabDetectionService {
         this.bypassTabIds.add(duplicated.id);
       }
     } catch (error) {
-      if (chrome.runtime.lastError) {
-        return;
-      }
       console.error('Error duplicating tab:', error);
     }
   }
@@ -286,7 +320,12 @@ class TabDetectionService {
     }
 
     this.bypassCreateCount += 1;
-    await chrome.tabs.create({ url, active: true });
+    try {
+      await chrome.tabs.create({ url, active: true });
+    } catch (error) {
+      this.bypassCreateCount = Math.max(0, this.bypassCreateCount - 1);
+      console.error('Error opening tab:', error);
+    }
   }
 
   private applyBypassForNewTab(tabId: number | undefined): void {
@@ -328,8 +367,8 @@ class TabDetectionService {
     }
 
     const openerUrl = this.tabUrl(opener);
-    const tabUrl = this.tabUrl(tab);
-    if (openerUrl && tabUrl && openerUrl === tabUrl) {
+    const createdUrl = this.tabUrl(tab);
+    if (openerUrl && createdUrl && openerUrl === createdUrl) {
       this.bypassTabIds.add(tab.id);
       return;
     }
@@ -348,48 +387,73 @@ class TabDetectionService {
     }
 
     const opener = await chrome.tabs.get(openerId).catch(() => null);
-    this.pendingNativeDuplicateOpener.delete(tab.id);
     if (!opener) {
+      this.pendingNativeDuplicateOpener.delete(tab.id);
+      return;
+    }
+
+    if (!this.matchesNativeDuplicatePlacement(tab, opener)) {
+      this.pendingNativeDuplicateOpener.delete(tab.id);
       return;
     }
 
     const openerUrl = this.tabUrl(opener);
-    const tabUrl = this.tabUrl(tab);
-    if (
-      openerUrl &&
-      tabUrl &&
-      openerUrl === tabUrl &&
-      this.matchesNativeDuplicatePlacement(tab, opener)
-    ) {
+    const createdUrl = this.tabUrl(tab);
+    if (!openerUrl || !createdUrl) {
+      return;
+    }
+
+    this.pendingNativeDuplicateOpener.delete(tab.id);
+    if (openerUrl === createdUrl) {
       this.bypassTabIds.add(tab.id);
     }
   }
 
-  private async handleTabCreated(tabId: number | undefined): Promise<void> {
-    if (tabId === undefined) {
+  private async processTab(tab: chrome.tabs.Tab, tabId: number): Promise<void> {
+    await this.ready;
+
+    if (this.processingTabs.has(tabId)) {
+      this.dirtyTabs.add(tabId);
       return;
     }
 
+    this.processingTabs.add(tabId);
+
     try {
-      const tab = await chrome.tabs.get(tabId);
-      await this.processTab(tab, tabId);
-    } catch (error) {
-      if (chrome.runtime.lastError) {
-        return;
+      let current = tab;
+      for (;;) {
+        this.dirtyTabs.delete(tabId);
+        await this.processTabOnce(current, tabId);
+        if (!this.dirtyTabs.has(tabId)) {
+          break;
+        }
+        const refreshed = await chrome.tabs.get(tabId).catch(() => null);
+        if (!refreshed) {
+          this.dirtyTabs.delete(tabId);
+          return;
+        }
+        current = refreshed;
       }
-      console.error('Error getting tab:', error);
+    } finally {
+      this.processingTabs.delete(tabId);
+    }
+
+    if (!this.dirtyTabs.has(tabId)) {
+      return;
+    }
+    this.dirtyTabs.delete(tabId);
+    const again = await chrome.tabs.get(tabId).catch(() => null);
+    if (again) {
+      await this.processTab(again, tabId);
     }
   }
 
-  private async processTab(tab: chrome.tabs.Tab, tabId: number): Promise<void> {
+  private async processTabOnce(tab: chrome.tabs.Tab, tabId: number): Promise<void> {
     await this.resolvePendingNativeTabDuplicate(tab);
     if (this.isBypassTab(tabId)) {
       return;
     }
     if (!this.currentSettings?.enabled) {
-      return;
-    }
-    if (this.processingTabs.has(tabId)) {
       return;
     }
     if (!tab.url || !this.shouldCheckTabUrl(tab.url)) {
@@ -401,29 +465,18 @@ class TabDetectionService {
       return;
     }
 
-    this.processingTabs.add(tabId);
+    const duplicateTabs = await this.findDuplicateTabs(
+      tab.url,
+      tabId,
+      tabSettings.ignoreParameters,
+      tabSettings.scopeWindowId
+    );
 
-    try {
-      const duplicateTabs = await this.findDuplicateTabs(
-        tab.url,
-        tabId,
-        tabSettings.ignoreParameters,
-        tabSettings.scopeWindowId
-      );
-
-      if (duplicateTabs.length > 0) {
-        const existingTab = duplicateTabs[0];
-        if (existingTab) {
-          await this.handleDuplicate(
-            tabId,
-            existingTab,
-            tabSettings.duplicateAction
-          );
-        }
-      }
-    } finally {
-      this.processingTabs.delete(tabId);
+    const existingTab = duplicateTabs[0];
+    if (!existingTab) {
+      return;
     }
+    await this.handleDuplicate(tabId, existingTab, tabSettings.duplicateAction);
   }
 
   private async findDuplicateTabs(
@@ -441,16 +494,17 @@ class TabDetectionService {
         return [];
       }
 
-      return allTabs.filter((tab) => {
-        if (tab.id === excludeTabId) {
-          return false;
-        }
-        if (!tab.url) {
-          return false;
-        }
-        const tabNormalizedUrl = normalizeUrl(tab.url, ignoreParameters);
-        return tabNormalizedUrl === normalizedUrl;
-      });
+      return allTabs
+        .filter((candidate) => {
+          if (candidate.id === excludeTabId) {
+            return false;
+          }
+          if (!candidate.url) {
+            return false;
+          }
+          return normalizeUrl(candidate.url, ignoreParameters) === normalizedUrl;
+        })
+        .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
     } catch (error) {
       console.error('Error finding duplicate tabs:', error);
       return [];
@@ -506,13 +560,9 @@ class TabDetectionService {
           console.warn('Unknown duplicate action:', action);
       }
     } catch (error) {
-      if (chrome.runtime.lastError) {
-        return;
-      }
       console.error('Error handling duplicate:', error);
     }
   }
 }
 
 export const tabDetectionService = new TabDetectionService();
-

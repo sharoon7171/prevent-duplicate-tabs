@@ -46,16 +46,15 @@ export function initializeContextMenu(): void {
 
   createContextMenu();
 
-  chrome.contextMenus.onClicked.addListener((info, tab) => {
+  chrome.contextMenus.onClicked.addListener((info, tab): void | Promise<void> => {
     if (info.menuItemId === LINK_MENU_ID) {
       if (!info.linkUrl || !isHttpUrl(info.linkUrl)) {
         return;
       }
-      void tabDetectionService.openTabAllowingDuplicate(info.linkUrl);
-      return;
+      return tabDetectionService.openTabAllowingDuplicate(info.linkUrl);
     }
     if (info.menuItemId === TAB_MENU_ID && tab?.id !== undefined) {
-      void tabDetectionService.duplicateTabAllowingDuplicate(tab.id);
+      return tabDetectionService.duplicateTabAllowingDuplicate(tab.id);
     }
   });
 }
