@@ -1,6 +1,6 @@
 {
   "name": "prevent-duplicate-tabs",
-  "version": "1.8.0",
+  "version": "1.8.2",
   "description": "Prevent Duplicate Tabs Chrome Extension",
   "type": "module",
   "scripts": {
