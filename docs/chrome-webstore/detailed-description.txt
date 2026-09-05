@@ -1,22 +1,24 @@
-Prevent Duplicate Tabs is a Chrome extension that stops duplicate tabs before they clutter your browser. If you open the same link twice, it detects the match and closes the extra tab or switches you to the tab you already have open—so you save memory, stay organized, and stop hunting through identical pages.
+Prevent Duplicate Tabs is a Chrome extension that stops duplicate tabs before they clutter your browser. When you open a link that is already open, it detects the match and closes the extra tab—or switches you to the tab you already have—so you save memory, stay organized, and stop hunting through identical pages.
 
-Install this duplicate tab blocker to automatically prevent duplicate tabs on all websites or only on sites you list, with rules you control. No account, no sign-in. All settings and your local “duplicates prevented” count stay on your device.
-
-────────────────────────────────────────────────────────────────────────────────
-WHY USERS SEARCH FOR A DUPLICATE TAB EXTENSION
-────────────────────────────────────────────────────────────────────────────────
-
-Too many tabs slow Chrome down. Opening the same URL in multiple tabs wastes RAM, creates tab clutter, and makes it easy to lose your place. Whether you research, code, shop, or manage email, a tab manager that blocks duplicate tabs keeps one copy of each page unless you choose otherwise.
-
-This extension is built for anyone who asks: “How do I stop Chrome from opening the same tab again?” or “How do I close duplicate tabs automatically?”
+Install this duplicate tab blocker to automatically prevent duplicate tabs on every site, or only on the sites you choose. No account and no sign-in. Your settings and your local “duplicates prevented” count stay on your device.
 
 ────────────────────────────────────────────────────────────────────────────────
-HOW DUPLICATE TAB PREVENTION WORKS
+WHY PREVENT DUPLICATE TABS?
 ────────────────────────────────────────────────────────────────────────────────
 
-When a new tab loads, Prevent Duplicate Tabs compares its URL to your open tabs (in all windows or only the current window—you decide). If it finds a duplicate, it runs your chosen action immediately. Set a global default, then override behavior per domain—for example, block duplicates on most sites but allow multiple Gmail or Google Docs tabs where you need them.
+Too many tabs slow Chrome down. Opening the same URL again wastes RAM, creates tab clutter, and makes it easy to lose your place. Whether you research, code, shop, or manage email, a focused tab manager that closes duplicate tabs keeps one useful copy of each page—unless you decide otherwise.
 
-Choose where prevention applies: block duplicates on all websites (with an exceptions list), or only on sites you add to a monitored list. When you turn the extension on or change scope or lists, it also scans tabs you already have open and resolves duplicates that match your rules.
+If you have ever asked how to stop Chrome from opening the same tab again, or how to close duplicate tabs automatically, this extension is built for that.
+
+────────────────────────────────────────────────────────────────────────────────
+HOW IT WORKS
+────────────────────────────────────────────────────────────────────────────────
+
+When a new tab loads, Prevent Duplicate Tabs compares its URL with your open tabs—across all windows or only the current window. If it finds a duplicate, it runs your chosen action right away.
+
+Set a global default, then override behavior per domain. For example, block duplicates on most sites while allowing multiple Gmail or Docs tabs where you need them. Choose prevention on all websites (with exceptions), or only on a monitored list of sites and pages.
+
+When you turn the extension on or change scope or lists, it also scans tabs you already have open and cleans up duplicates that match your rules.
 
 ────────────────────────────────────────────────────────────────────────────────
 KEY FEATURES
@@ -25,58 +27,57 @@ KEY FEATURES
 Automatic duplicate detection
 • Compares new tab URLs to open tabs—no manual cleanup.
 
-Four duplicate-tab actions
+Four actions when a duplicate appears
 • Close the new duplicate and stay on your current tab.
 • Close the old duplicate and stay where you are.
-• Close the new tab and switch to the existing tab (focuses the right window).
+• Close the new tab and switch to the existing tab (and focus that window).
 • Close the old tab and switch to the new one.
 
-Scope and URL matching
-• All windows or current window only—control where duplicates are checked.
-• Ignore URL parameters—treat pages with different query strings (?id=1 vs ?id=2) as the same URL when you want stricter matching.
-
-Open in new tab (allow duplicate)
-• Open in new tab (allow duplicate) – Right-click a hyperlink and choose this context menu option to open that URL in a new tab without duplicate prevention, even when your rules would normally block or merge the duplicate.
+Matching and window scope
+• Check duplicates in all windows, or only the current window.
+• Optionally ignore URL parameters so pages that differ only by query strings (?id=1 vs ?id=2) count as the same page.
 
 Prevention scope and site lists
-• All websites—prevent duplicates everywhere except URLs or domains on your exceptions list.
-• Listed sites only—prevent duplicates only on domains or pages you add to the monitored list; skip individual pages on a monitored domain when needed.
-• One unified list on the options page—shows exceptions or monitored sites depending on your scope; search, add, edit, and remove entries.
-• Current-domain controls in the popup and options—toggle monitoring or exceptions for this page or this domain without typing URLs.
+• All websites—prevent duplicate tabs everywhere except domains or pages on your exceptions list.
+• Listed sites only—prevent duplicates only on domains or pages you monitor; skip individual pages on a monitored domain when needed.
+• One list on the options page for exceptions or monitored sites, with search, add, edit, and remove.
+• Current-domain controls in the popup and options—toggle this page or this domain without typing URLs.
 
-Per-site rules and popup shortcuts
-• Site-specific rules—set duplicate action and “ignore URL parameters” per domain from the full options page.
-• Popup shortcuts—enable or disable the extension, choose prevention scope, and adjust this page or this domain from the toolbar icon.
+Per-site rules and quick controls
+• Site-specific rules—set the duplicate action and “ignore URL parameters” per domain on the options page.
+• Toolbar popup—enable or disable the extension, choose prevention scope, and adjust this page or this domain in one click.
+• Options page—full control of scope, global defaults, site lists, and per-domain rules (right-click the extension icon → Options).
 
-Control and local stats
-• One-click on/off in the popup.
-• See open tab count and how many duplicates were prevented—stored locally only.
-• Options page for prevention scope, global defaults, site lists, and per-domain rules (right-click the extension icon → Options).
+Open a deliberate duplicate
+• Right-click a link and choose “Open in new tab (allow duplicate)” to open that URL without prevention when you intentionally want two copies.
+
+Local stats
+• See your open tab count and how many duplicates were prevented—stored only on your device.
 
 ────────────────────────────────────────────────────────────────────────────────
 WHO IT IS FOR
 ────────────────────────────────────────────────────────────────────────────────
 
 • Power users with dozens of tabs who want less tab clutter.
-• Developers and researchers who reopen the same documentation or articles.
-• Remote workers juggling email, dashboards, and docs in Chrome.
-• Anyone searching for: prevent duplicate tabs, duplicate tab blocker, close duplicate tabs, stop duplicate tabs Chrome, tab organizer, or browser productivity extension.
+• Developers and researchers who reopen the same docs and articles.
+• Remote workers juggling email, dashboards, and documents in Chrome.
+• Anyone who wants a simple way to prevent duplicate tabs and keep browsing focused.
 
 ────────────────────────────────────────────────────────────────────────────────
-BENEFITS
+WHAT YOU GET
 ────────────────────────────────────────────────────────────────────────────────
 
-• Fewer duplicate tabs → less RAM use and a snappier browser.
+• Fewer duplicate tabs, less RAM use, and a snappier Chrome experience.
 • Less confusion from multiple copies of the same page.
 • Flexible rules—strict globally, relaxed on sites that need multiple tabs.
-• Open a deliberate duplicate via the right-click menu when you need two copies.
-• Private by design—no analytics, no external servers for your browsing data.
+• A right-click escape hatch when you need two copies on purpose.
+• Private by design—no analytics and no external servers for your browsing data.
 
 ────────────────────────────────────────────────────────────────────────────────
 PRIVACY AND PERMISSIONS
 ────────────────────────────────────────────────────────────────────────────────
 
-Uses tabs (read URLs, close or switch tabs, open from context menu), storage (settings and local stats), windows (focus the correct window and close empty windows after cleanup), and contextMenus (“Open in new tab (allow duplicate)” on hyperlinks—no broad host permissions or content scripts on web pages). Popup and options UI load the Poppins font from Google Fonts for display only. See the extension privacy policy for details.
+Uses tabs (read URLs, close or switch tabs, open from the context menu), storage (settings and local stats), windows (focus the correct window and close empty windows after cleanup), and contextMenus (“Open in new tab (allow duplicate)” on links). It does not use broad host permissions or content scripts on web pages. See the extension privacy policy for details.
 
 ────────────────────────────────────────────────────────────────────────────────
 GET STARTED
